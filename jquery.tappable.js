@@ -56,96 +56,108 @@
  *                 the 'touched' class will not be added and the callback will
  *                 not be fired.
  *
+ *   selector:    css like selector used to handle delegated tappable events
+ *                e.g. $('body').tappable({selector:'a.test'}, callback: function(){ console.log(" test link tapped") })
+ *
  */
 
-;(function($) {
-  var touchSupported = ('ontouchstart' in window)
+;
+(function ($) {
+    var touchSupported = ('ontouchstart' in window)
 
-  $.fn.tappable = function(options) {
-    var cancelOnMove = true,
-        onlyIf = function() { return true },
-        touchDelay = 0,
-        callback
+    $.fn.tappable = function (options) {
+        var cancelOnMove = true,
+            onlyIf = function () {
+                return true
+            },
+            touchDelay = 0,
+            callback,
+            selector;
 
-    switch(typeof options) {
-      case 'function':
-        callback = options
-        break;
-      case 'object':
-        callback = options.callback
+        switch (typeof options) {
+            case 'function':
+                callback = options
+                break;
+            case 'object':
+                callback = options.callback
 
-        if (typeof options.cancelOnMove != 'undefined') {
-          cancelOnMove = options.cancelOnMove
+                if (typeof options.cancelOnMove != 'undefined') {
+                    cancelOnMove = options.cancelOnMove
+                }
+
+                if (typeof options.onlyIf != 'undefined') {
+                    onlyIf = options.onlyIf
+                }
+
+                if (typeof options.touchDelay != 'undefined') {
+                    touchDelay = options.touchDelay
+                }
+
+                if (typeof options.selector != 'undefined') {
+                    selector = options.selector
+                }
+
+                break;
         }
 
-        if (typeof options.onlyIf != 'undefined') {
-          onlyIf = options.onlyIf
-        }
-
-        if (typeof options.touchDelay != 'undefined') {
-          touchDelay = options.touchDelay
-        }
-
-        break;
-    }
-
-    var fireCallback = function(el, event) {
-      if (typeof callback == 'function' && onlyIf(el)) {
-        callback.call(el, event)
-      }
-    }
-
-    if (touchSupported) {
-      this.bind('touchstart', function(event) {
-        var el = this
-
-        if (onlyIf(this)) {
-          $(el).addClass('touch-started')
-
-          window.setTimeout(function() {
-            if ($(el).hasClass('touch-started')) {
-              $(el).addClass('touched')
+        var fireCallback = function (el, event) {
+            if (typeof callback == 'function' && onlyIf(el)) {
+                callback.call(el, event)
             }
-          }, touchDelay)
         }
 
-        return true
-      })
+        if (touchSupported) {
+            this.on('touchstart', selector, function (event) {
+                var $that = $(this);
 
-      this.bind('touchend', function(event) {
-        var el = this
+                if (onlyIf(this)) {
+                    $that.addClass('touch-started')
 
-        if ($(el).hasClass('touch-started')) {
-          $(el)
-            .removeClass('touched')
-            .removeClass('touch-started')
+                    window.setTimeout(function () {
+                        if ($that.hasClass('touch-started')) {
+                            $that.addClass('touched')
+                        }
+                    }, touchDelay)
+                }
 
-          fireCallback(el, event)
+                return true
+            })
+
+            this.on('touchend', selector, function (event) {
+                var that = this,
+                    $that = $(that);
+
+                if ($that.hasClass('touch-started')) {
+                    $that
+                        .removeClass('touched')
+                        .removeClass('touch-started')
+
+                    fireCallback(that, event)
+                }
+
+                return true
+            })
+
+            this.on('click', selector,  function (event) {
+                event.preventDefault()
+            })
+
+            if (cancelOnMove) {
+                this.on('touchmove', selector, function () {
+                    $(this)
+                        .removeClass('touched')
+                        .removeClass('touch-started')
+                })
+            }
+        } else if (typeof callback == 'function') {
+            this.on('click', selector, function (event) {
+                if (onlyIf(this)) {
+                    callback.call(this, event)
+                }
+            })
         }
 
-        return true
-      })
-
-      this.bind('click', function(event) {
-        event.preventDefault()
-      })
-
-      if (cancelOnMove) {
-        this.bind('touchmove', function() {
-          $(this)
-            .removeClass('touched')
-            .removeClass('touch-started')
-        })
-      }
-    } else if (typeof callback == 'function') {
-      this.bind('click', function(event) {
-        if (onlyIf(this)) {
-          callback.call(this, event)
-        }
-      })
+        return this
     }
-
-    return this
-  }
 })(jQuery);
 
